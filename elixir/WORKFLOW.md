@@ -22,12 +22,20 @@ hooks:
     git clone --depth 1 https://github.com/openai/symphony .
     if command -v mise >/dev/null 2>&1; then
       cd elixir && mise trust && mise exec -- mix deps.get
+    elif command -v mix >/dev/null 2>&1; then
+      cd elixir && mix deps.get
     fi
   before_remove: |
-    cd elixir && mise exec -- mix workspace.before_remove
+    if command -v mise >/dev/null 2>&1; then
+      cd elixir && mise exec -- mix workspace.before_remove
+    elif command -v mix >/dev/null 2>&1; then
+      cd elixir && mix workspace.before_remove
+    fi
 agent:
   max_concurrent_agents: 10
   max_turns: 20
+server:
+  host: 0.0.0.0
 codex:
   command: codex --config shell_environment_policy.inherit=all --config 'model="gpt-5.5"' --config model_reasoning_effort=xhigh app-server
   approval_policy: never

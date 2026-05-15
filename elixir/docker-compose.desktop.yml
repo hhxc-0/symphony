@@ -1,0 +1,22 @@
+services:
+  symphony:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: symphony-elixir:local
+    environment:
+      LINEAR_API_KEY: ${LINEAR_API_KEY:-}
+      LINEAR_ASSIGNEE: ${LINEAR_ASSIGNEE:-}
+      MIX_ENV: prod
+    ports:
+      - "${SYMPHONY_PORT:-4000}:4000"
+    volumes:
+      - symphony_workspaces:/root/code/symphony-workspaces
+      - symphony_logs:/var/lib/symphony/logs
+      - ${HOME}/.codex:/root/.codex:ro
+      - ${HOME}/.ssh:/root/.ssh:ro
+    restart: unless-stopped
+
+volumes:
+  symphony_workspaces:
+  symphony_logs:

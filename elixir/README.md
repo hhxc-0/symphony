@@ -46,14 +46,76 @@ Symphony stops the active agent for that issue and cleans up matching workspaces
 
 ## Prerequisites
 
-We recommend using [mise](https://mise.jdx.dev/) to manage Elixir/Erlang versions.
+For Docker Compose:
 
 ```bash
+docker compose version
+```
+
+You also need:
+
+- a Linear personal API key in `LINEAR_API_KEY`
+- Codex CLI auth on the host under `~/.codex`
+- SSH keys under `~/.ssh` if your workflow clones private repositories over SSH
+
+For local development without Docker, we recommend using [mise](https://mise.jdx.dev/) to manage
+Elixir/Erlang versions:
+
+```bash
+mise trust
 mise install
+mise exec -- mix setup
 mise exec -- elixir --version
 ```
 
-## Run
+## Run With Docker Compose Desktop
+
+```bash
+git clone https://github.com/openai/symphony
+cd symphony/elixir
+cp .env.example .env
+# Edit .env and set LINEAR_API_KEY.
+docker compose -f docker-compose.desktop.yml up --build
+```
+
+The Compose stack starts one `symphony` service, builds `./bin/symphony` inside the image, installs
+the Codex CLI, and exposes the dashboard on <http://localhost:4000> by default.
+
+Persistent runtime data is stored in named volumes:
+
+- `symphony_workspaces` mounted at `/root/code/symphony-workspaces`
+- `symphony_logs` mounted at `/var/lib/symphony/logs`
+
+The stack mounts host auth read-only:
+
+- `~/.codex` to `/root/.codex`
+- `~/.ssh` to `/root/.ssh`
+
+To use a different host dashboard port, set `SYMPHONY_PORT` in `.env`.
+
+To stop the stack:
+
+```bash
+docker compose -f docker-compose.desktop.yml down
+```
+
+## Run On Server
+
+Use the alternate Compose file when you want persistent state on the host under `/DATA/AppData/symphony`:
+
+```bash
+cp .env.example .env
+# Edit .env and set LINEAR_API_KEY.
+docker compose -f docker-compose.server.yml up --build
+```
+
+This variant mounts:
+
+- `/DATA/AppData/symphony/home` to `/root`
+- `/DATA/AppData/symphony/symphony_workspaces` to `/root/code/symphony-workspaces`
+- `/DATA/AppData/symphony/logs` to `/var/lib/symphony/logs`
+
+## Run Locally
 
 ```bash
 git clone https://github.com/openai/symphony
@@ -62,7 +124,9 @@ mise trust
 mise install
 mise exec -- mix setup
 mise exec -- mix build
-mise exec -- ./bin/symphony ./WORKFLOW.md
+mise exec -- ./bin/symphony \
+  --i-understand-that-this-will-be-running-without-the-usual-guardrails \
+  ./WORKFLOW.md
 ```
 
 ## Configuration
@@ -70,7 +134,9 @@ mise exec -- ./bin/symphony ./WORKFLOW.md
 Pass a custom workflow file path to `./bin/symphony` when starting the service:
 
 ```bash
-./bin/symphony /path/to/custom/WORKFLOW.md
+./bin/symphony \
+  --i-understand-that-this-will-be-running-without-the-usual-guardrails \
+  /path/to/custom/WORKFLOW.md
 ```
 
 If no path is passed, Symphony defaults to `./WORKFLOW.md`.
@@ -79,6 +145,9 @@ Optional flags:
 
 - `--logs-root` tells Symphony to write logs under a different directory (default: `./log`)
 - `--port` also starts the Phoenix observability service (default: disabled)
+
+When running in Docker Compose, the included `WORKFLOW.md` binds the dashboard host to `0.0.0.0`
+so the mapped host port can reach the Phoenix server.
 
 The `WORKFLOW.md` file uses YAML front matter for configuration, plus a Markdown body used as the
 Codex session prompt.
